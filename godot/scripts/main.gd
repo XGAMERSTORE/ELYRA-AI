@@ -54,8 +54,8 @@ func _setup_world() -> void:
 	add_child(light)
 	camera = Camera3D.new()
 	camera.position = Vector3(0, 1.6, 4.5)
-	camera.look_at(Vector3(0, 1.25, 0))
 	add_child(camera)
+	camera.look_at(Vector3(0, 1.25, 0))
 	camera.current = true
 	var floor_mesh := MeshInstance3D.new()
 	var floor_box := BoxMesh.new()
@@ -80,6 +80,12 @@ func _setup_world() -> void:
 	_part(avatar, 0.12, 0.9, Vector3(0.22, 0.51, 0), Color("#2c2441"))
 	_part(avatar, 0.11, 0.85, Vector3(-0.49, 1.46, 0), Color("#edb5a5"))
 	_part(avatar, 0.11, 0.85, Vector3(0.49, 1.46, 0), Color("#edb5a5"))
+	# Basic facial features and layered hair, generated without external assets.
+	_part(avatar, 0.034, 0.07, Vector3(-0.13, 2.18, 0.265), Color("#38263d"))
+	_part(avatar, 0.034, 0.07, Vector3(0.13, 2.18, 0.265), Color("#38263d"))
+	_part(avatar, 0.042, 0.055, Vector3(0, 2.01, 0.285), Color("#a75870"))
+	_part(avatar, 0.15, 1.10, Vector3(-0.29, 1.98, -0.11), Color("#32213b"))
+	_part(avatar, 0.15, 1.10, Vector3(0.29, 1.98, -0.11), Color("#32213b"))
 
 func _setup_ui() -> void:
 	var layer := CanvasLayer.new()
