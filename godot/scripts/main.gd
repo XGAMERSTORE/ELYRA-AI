@@ -9,6 +9,9 @@ var chat_input: LineEdit
 var animation_time := 0.0
 var animation_mode := "idle"
 var body_mesh: MeshInstance3D
+var face_eyes: Array[Node3D] = []
+var model_loaded := false
+const CHARACTER_SCENE := "res://assets/characters/elyra.glb"
 var voice_enabled := true
 var adult_mode := false
 var user_confirmed_adult := false
@@ -73,6 +76,16 @@ func _setup_world() -> void:
 	add_child(back)
 	avatar = Node3D.new()
 	add_child(avatar)
+	# Import a properly licensed rigged GLB as soon as it is added to the project.
+	# The generated placeholder remains usable while the asset is unavailable.
+	if ResourceLoader.exists(CHARACTER_SCENE):
+		var packed = load(CHARACTER_SCENE)
+		if packed is PackedScene:
+			var character = packed.instantiate()
+			avatar.add_child(character)
+			model_loaded = true
+	if model_loaded:
+		return
 	_part(avatar, 0.29, 0.55, Vector3(0, 2.13, 0), Color("#edb5a5"))
 	_part(avatar, 0.36, 0.65, Vector3(0, 2.37, -0.12), Color("#34263d"))
 	body_mesh = _part(avatar, 0.38, 1.0, Vector3(0, 1.42, 0), Color("#8e50b5"))
@@ -81,8 +94,10 @@ func _setup_world() -> void:
 	_part(avatar, 0.11, 0.85, Vector3(-0.49, 1.46, 0), Color("#edb5a5"))
 	_part(avatar, 0.11, 0.85, Vector3(0.49, 1.46, 0), Color("#edb5a5"))
 	# Basic facial features and layered hair, generated without external assets.
-	_part(avatar, 0.034, 0.07, Vector3(-0.13, 2.18, 0.265), Color("#38263d"))
-	_part(avatar, 0.034, 0.07, Vector3(0.13, 2.18, 0.265), Color("#38263d"))
+	var left_eye := _part(avatar, 0.034, 0.07, Vector3(-0.13, 2.18, 0.265), Color("#38263d"))
+	var right_eye := _part(avatar, 0.034, 0.07, Vector3(0.13, 2.18, 0.265), Color("#38263d"))
+	face_eyes.append(left_eye)
+	face_eyes.append(right_eye)
 	_part(avatar, 0.042, 0.055, Vector3(0, 2.01, 0.285), Color("#a75870"))
 	_part(avatar, 0.15, 1.10, Vector3(-0.29, 1.98, -0.11), Color("#32213b"))
 	_part(avatar, 0.15, 1.10, Vector3(0.29, 1.98, -0.11), Color("#32213b"))
@@ -134,8 +149,11 @@ func _action(action: String) -> void:
 		"Objetí": animation_mode = "hug"
 		"Polibek": animation_mode = "kiss"
 		"Oblečení":
-			var material := body_mesh.material_override as StandardMaterial3D
-			material.albedo_color = Color.from_hsv(randf(), 0.55, 0.8)
+			if body_mesh != null:
+				var material := body_mesh.material_override as StandardMaterial3D
+				material.albedo_color = Color.from_hsv(randf(), 0.55, 0.8)
+			else:
+				_append("Systém", "Oblečení importovaného modelu se nastavuje přes jeho materiály.")
 		"18+":
 			if not user_confirmed_adult:
 				_show_adult_confirmation()
@@ -165,6 +183,11 @@ func _process(delta: float) -> void:
 	if avatar == null:
 		return
 	avatar.position.y = sin(animation_time * 2.0) * 0.025
+	# Subtle periodic eye blink on the procedural fallback avatar.
+	var blink := absf(sin(animation_time * 0.72))
+	var eye_scale := 0.12 if blink > 0.993 else 1.0
+	for eye in face_eyes:
+		eye.scale.y = eye_scale
 	match animation_mode:
 		"dance":
 			avatar.rotation.z = sin(animation_time * 5.0) * 0.12
