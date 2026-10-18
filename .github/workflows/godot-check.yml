@@ -1,0 +1,19 @@
+name: Godot project check
+on:
+  push:
+    paths: ['godot/**', '.github/workflows/godot-check.yml']
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          wget -q https://github.com/godotengine/godot-builds/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q Godot_v4.3-stable_linux.x86_64.zip
+          chmod +x Godot_v4.3-stable_linux.x86_64
+      - name: Headless import and validation
+        run: |
+          ./Godot_v4.3-stable_linux.x86_64 --headless --path godot --editor --quit
+          ./Godot_v4.3-stable_linux.x86_64 --headless --path godot --quit-after 30
