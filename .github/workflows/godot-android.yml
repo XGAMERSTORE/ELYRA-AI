@@ -46,12 +46,22 @@ jobs:
       - name: Import and validate Godot
         run: |
           ./Godot_v4.3-stable_linux.x86_64 --headless --path godot --editor --quit
+          ./Godot_v4.3-stable_linux.x86_64 --headless --path godot --quit-after 2
       - name: Build APK
         run: |
           mkdir -p godot/build
           ./Godot_v4.3-stable_linux.x86_64 --headless --path godot --export-debug "Android" build/ELYRA-AI-debug.apk
           test -s godot/build/ELYRA-AI-debug.apk
+      - name: Show APK metadata
+        if: success()
+        run: |
+          ls -lh godot/build/ELYRA-AI-debug.apk
+          sha256sum godot/build/ELYRA-AI-debug.apk | tee godot/build/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ELYRA-AI-Godot-Android-APK
-          path: godot/build/ELYRA-AI-debug.apk
+          path: |
+            godot/build/ELYRA-AI-debug.apk
+            godot/build/SHA256SUMS.txt
+          if-no-files-found: warn
