@@ -11,6 +11,10 @@ var animation_mode := "idle"
 var body_mesh: MeshInstance3D
 var face_eyes: Array[Node3D] = []
 var model_loaded := false
+var walking := false
+var walk_target := Vector3.ZERO
+var move_speed := 1.45
+var scene_height_fraction := 0.60
 const CHARACTER_SCENE := "res://assets/characters/elyra.glb"
 var voice_enabled := true
 var adult_mode := false
@@ -56,9 +60,9 @@ func _setup_world() -> void:
 	light.light_energy = 1.5
 	add_child(light)
 	camera = Camera3D.new()
-	camera.position = Vector3(0, 1.6, 4.5)
+	camera.position = Vector3(0, 3.4, 6.7)
 	add_child(camera)
-	camera.look_at(Vector3(0, 1.25, 0))
+	camera.look_at(Vector3(0, 1.0, -0.4))
 	camera.current = true
 	var floor_mesh := MeshInstance3D.new()
 	var floor_box := BoxMesh.new()
@@ -74,6 +78,18 @@ func _setup_world() -> void:
 	back.position = Vector3(0, 2, -3)
 	back.material_override = _material(Color("#43304f"))
 	add_child(back)
+	# Simple 3D apartment furniture with real depth and lighting.
+	_box(Vector3(-2.1, 0.35, -1.7), Vector3(2.0, 0.7, 0.9), Color("#685477"))
+	_box(Vector3(-2.1, 0.78, -2.05), Vector3(2.0, 0.8, 0.22), Color("#796487"))
+	_box(Vector3(1.8, 0.37, -1.8), Vector3(1.5, 0.74, 0.75), Color("#56475f"))
+	_box(Vector3(1.8, 0.78, -1.8), Vector3(1.65, 0.09, 0.85), Color("#ac8d70"))
+	_box(Vector3(0, 0.22, 1.8), Vector3(1.4, 0.4, 0.75), Color("#805f73"))
+	var lamp := OmniLight3D.new()
+	lamp.position = Vector3(-2.5, 2.7, -1.5)
+	lamp.light_color = Color("#ffd9af")
+	lamp.light_energy = 1.8
+	lamp.omni_range = 6.0
+	add_child(lamp)
 	avatar = Node3D.new()
 	add_child(avatar)
 	# Import a properly licensed rigged GLB as soon as it is added to the project.
@@ -103,6 +119,33 @@ func _setup_world() -> void:
 	_part(avatar, 0.15, 1.10, Vector3(-0.29, 1.98, -0.11), Color("#32213b"))
 	_part(avatar, 0.15, 1.10, Vector3(0.29, 1.98, -0.11), Color("#32213b"))
 
+func _box(pos: Vector3, size: Vector3, color: Color) -> void:
+	var mesh := MeshInstance3D.new()
+	var shape := BoxMesh.new()
+	shape.size = size
+	mesh.mesh = shape
+	mesh.position = pos
+	mesh.material_override = _material(color)
+	add_child(mesh)
+
+func _unhandled_input(event: InputEvent) -> void:
+	# Tap empty 3D floor to move Elyra; ignore the chat/control area.
+	var point := Vector2(-1, -1)
+	if event is InputEventScreenTouch and event.pressed:
+		point = event.position
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		point = event.position
+	if point.x < 0 or point.y > get_viewport().get_visible_rect().size.y * scene_height_fraction:
+		return
+	var origin := camera.project_ray_origin(point)
+	var direction := camera.project_ray_normal(point)
+	var ground := Plane(Vector3.UP, 0.0)
+	var intersection = ground.intersects_ray(origin, direction)
+	if intersection is Vector3:
+		walk_target = Vector3(clampf(intersection.x, -3.3, 3.3), 0.0, clampf(intersection.z, -2.4, 3.2))
+		walking = true
+		animation_mode = "walk"
+
 func _setup_ui() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
@@ -114,7 +157,7 @@ func _setup_ui() -> void:
 	layout.add_theme_constant_override("separation", 8)
 	root.add_child(layout)
 	var heading := Label.new()
-	heading.text = "♥ ELYRA AI  |  Godot 3D"
+	heading.text = "♥ ELYRA AI  |  Klepni na podlahu pro pohyb"
 	heading.add_theme_font_size_override("font_size", 30)
 	layout.add_child(heading)
 	var gap := Control.new()
@@ -183,7 +226,17 @@ func _process(delta: float) -> void:
 	animation_time += delta
 	if avatar == null:
 		return
-	avatar.position.y = sin(animation_time * 2.0) * 0.025
+	if walking:
+		var offset := Vector3(walk_target.x - avatar.position.x, 0.0, walk_target.z - avatar.position.z)
+		if offset.length() < 0.08:
+			walking = false
+			animation_mode = "idle"
+		else:
+			var step := offset.normalized() * minf(move_speed * delta, offset.length())
+			avatar.position.x += step.x
+			avatar.position.z += step.z
+			avatar.rotation.y = lerp_angle(avatar.rotation.y, atan2(-offset.x, -offset.z), delta * 6.0)
+	avatar.position.y = sin(animation_time * (8.0 if walking else 2.0)) * (0.055 if walking else 0.025)
 	# Subtle periodic eye blink on the procedural fallback avatar.
 	var blink := absf(sin(animation_time * 0.72))
 	var eye_scale := 0.12 if blink > 0.993 else 1.0
@@ -200,9 +253,10 @@ func _process(delta: float) -> void:
 			avatar.rotation.x = -0.12
 		_:
 			avatar.rotation = avatar.rotation.lerp(Vector3.ZERO, delta * 4.0)
-	if animation_time > 3.0:
+	if animation_time > 3.0 and not walking:
 		animation_mode = "idle"
-		avatar.position.z = lerpf(avatar.position.z, 0.0, delta * 4.0)
+		if not walking:
+			avatar.position.z = lerpf(avatar.position.z, 0.0, delta * 4.0)
 
 func _send(text: String) -> void:
 	var clean := text.strip_edges().substr(0, 500)
