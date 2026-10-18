@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>ELYRA AI</title>
+<style>body{margin:0;background:#110c20;color:#f5eafa;font:16px system-ui}header{padding:15px;background:#241535;display:flex;justify-content:space-between}#stage{height:49vh;position:relative}canvas{display:block}#actions{display:flex;gap:8px;padding:10px;overflow:auto}button{background:#7546ab;border:0;border-radius:18px;color:white;padding:10px 16px;white-space:nowrap}#chat{height:22vh;overflow:auto;padding:12px;background:#1b112b}.msg{margin:6px 0;padding:9px;border-radius:12px;background:#342047}.me{background:#593879;text-align:right}footer{display:flex;padding:8px;gap:8px}input{min-width:0;flex:1;background:#2a1a40;border:1px solid #6e4b88;color:white;padding:12px;border-radius:18px}</style></head><body>
+<header><b>♥ ELYRA AI</b><span>3D prototyp • v0.2</span></header><div id="stage"></div>
+<div id="actions"><button onclick="animatePose('wave')">Zamávání</button><button onclick="animatePose('dance')">Tanec</button><button onclick="animatePose('hug')">Objetí</button><button onclick="animatePose('kiss')">Polibek</button><button onclick="changeColor()">Oblečení</button></div>
+<div id="chat" aria-live="polite"></div><footer><input id="message" placeholder="Napiš Elyře..." maxlength="500"><button onclick="send()">Odeslat</button></footer>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
+const stage=document.getElementById('stage'),scene=new THREE.Scene();scene.background=new THREE.Color(0x110c20);
+const camera=new THREE.PerspectiveCamera(45,stage.clientWidth/stage.clientHeight,.1,100);camera.position.set(0,1.5,5);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(stage.clientWidth,stage.clientHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));stage.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff,0x5d367a,2));const light=new THREE.DirectionalLight(0xffffff,2);light.position.set(3,5,5);scene.add(light);
+const group=new THREE.Group();scene.add(group);
+function mesh(geometry,color,x,y,z,parent=group){const m=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color,roughness:.7}));m.position.set(x,y,z);parent.add(m);return m}
+mesh(new THREE.SphereGeometry(.35,24,16),0xf0b9a8,0,2.2,0);mesh(new THREE.SphereGeometry(.38,24,16),0x30203a,0,2.43,-.09).scale.set(1, .72,1);
+const torso=mesh(new THREE.CylinderGeometry(.35,.45,1,24),0x7d40ab,0,1.45,0);
+mesh(new THREE.CylinderGeometry(.12,.14,.8,12),0x29213c,-.22,.55,0);mesh(new THREE.CylinderGeometry(.12,.14,.8,12),0x29213c,.22,.55,0);
+const left=new THREE.Group(),right=new THREE.Group();left.position.set(-.42,1.85,0);right.position.set(.42,1.85,0);group.add(left,right);
+mesh(new THREE.CylinderGeometry(.10,.09,.8,12),0xf0b9a8,0,-.38,0,left);mesh(new THREE.CylinderGeometry(.10,.09,.8,12),0xf0b9a8,0,-.38,0,right);
+mesh(new THREE.SphereGeometry(.035,12,8),0x24162d,-.13,2.23,.32);mesh(new THREE.SphereGeometry(.035,12,8),0x24162d,.13,2.23,.32);
+let pose='idle',poseStart=0;window.animatePose=p=>{pose=p;poseStart=performance.now()};
+const clothes=[0x7d40ab,0xa32959,0x286d79,0x24242e];let ci=0;window.changeColor=()=>{ci=(ci+1)%clothes.length;torso.material.color.setHex(clothes[ci])};
+let down=false,px=0;renderer.domElement.addEventListener('pointerdown',e=>{down=true;px=e.clientX});window.addEventListener('pointerup',()=>down=false);renderer.domElement.addEventListener('pointermove',e=>{if(down){group.rotation.y+=(e.clientX-px)*.012;px=e.clientX}});
+function tick(t){requestAnimationFrame(tick);const a=t*.001;group.position.y=Math.sin(a*2)*.025;left.rotation.z=.08;right.rotation.z=-.08;if(pose!=='idle'){let dt=(t-poseStart)/1000;if(dt>3)pose='idle';else if(pose==='wave')right.rotation.z=-1.5+Math.sin(dt*12)*.3;else if(pose==='dance'){group.rotation.z=Math.sin(dt*5)*.15;left.rotation.z=Math.sin(dt*7)*.7;right.rotation.z=-Math.sin(dt*7)*.7}else if(pose==='hug'){left.rotation.z=-.9;right.rotation.z=.9}else if(pose==='kiss'){group.rotation.x=-.12;group.position.z=.3}}else{group.rotation.z*=.9;group.rotation.x*=.9;group.position.z*=.9}renderer.render(scene,camera)}requestAnimationFrame(tick);
+window.addEventListener('resize',()=>{camera.aspect=stage.clientWidth/stage.clientHeight;camera.updateProjectionMatrix();renderer.setSize(stage.clientWidth,stage.clientHeight)});
+const chat=document.getElementById('chat'),input=document.getElementById('message');let history=[];try{history=JSON.parse(localStorage.getItem('elyra_history')||'[]')}catch{}
+function add(who,body){const el=document.createElement('div');el.className='msg '+(who==='Ty'?'me':'');el.textContent=who+': '+body;chat.appendChild(el);chat.scrollTop=chat.scrollHeight}
+history.forEach(x=>add(x.who,x.body));if(!history.length)add('Elyra','Ahoj! ♥ Jsem Elyra. Jaký jsi měl den?');
+window.send=()=>{const msg=input.value.trim();if(!msg)return;input.value='';const replies=['To zní zajímavě. Povíš mi víc? ♥','Ráda si s tebou povídám. Co tě dnes potěšilo?','Hmm, to bych chtěla slyšet podrobněji. 😊','Můžeme si povídat, flirtovat nebo si zatancovat. ♥'];const answer=replies[Math.floor(Math.random()*replies.length)];for(const [who,body] of [['Ty',msg],['Elyra',answer]]){history.push({who,body});add(who,body)}localStorage.setItem('elyra_history',JSON.stringify(history.slice(-100)))};
+input.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
+</script></body></html>
