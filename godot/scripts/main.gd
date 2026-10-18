@@ -82,8 +82,9 @@ func _setup_world() -> void:
 		var packed = load(CHARACTER_SCENE)
 		if packed is PackedScene:
 			var character = packed.instantiate()
-			avatar.add_child(character)
-			model_loaded = true
+			if character is Node3D:
+				avatar.add_child(character)
+				model_loaded = true
 	if model_loaded:
 		return
 	_part(avatar, 0.29, 0.55, Vector3(0, 2.13, 0), Color("#edb5a5"))
@@ -224,6 +225,7 @@ func _append(who: String, message: String) -> void:
 func _show_history() -> void:
 	if history.is_empty():
 		_append(companion_name, "Ahoj! ♥ Vítej v mém virtuálním bytě.")
+		_save_state()
 	else:
 		for entry in history:
 			chat_log.append_text(str(entry.get("who", "")) + ": " + str(entry.get("message", "")) + "\n")
@@ -241,7 +243,9 @@ func _load_state() -> void:
 		return
 	var data = JSON.parse_string(file.get_as_text())
 	if data is Dictionary:
-		history = data.get("history", [])
+		var stored_history = data.get("history", [])
+		if stored_history is Array:
+			history = stored_history
 		user_confirmed_adult = data.get("confirmed", false)
 		adult_mode = data.get("adult", false) and user_confirmed_adult
 		companion_name = str(data.get("name", "Elyra"))
