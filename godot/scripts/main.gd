@@ -14,7 +14,7 @@ var model_loaded := false
 var walking := false
 var walk_target := Vector3.ZERO
 var move_speed := 1.45
-var scene_height_fraction := 0.60
+var scene_height_fraction := 0.69
 const CHARACTER_SCENE := "res://assets/characters/elyra.glb"
 var voice_enabled := true
 var adult_mode := false
@@ -151,40 +151,80 @@ func _setup_ui() -> void:
 	add_child(layer)
 	var root := Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_PASS
 	layer.add_child(root)
+	var top := PanelContainer.new()
+	top.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	top.offset_bottom = 76
+	top.add_theme_stylebox_override("panel", _panel_style(Color(0.08, 0.055, 0.13, 0.92)))
+	root.add_child(top)
+	var title := Label.new()
+	title.text = "ELYRA  •  DOMOV"
+	title.add_theme_font_size_override("font_size", 22)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	top.add_child(title)
+	var bottom := PanelContainer.new()
+	bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	bottom.anchor_top = 1.0
+	bottom.anchor_bottom = 1.0
+	bottom.offset_top = -355
+	bottom.offset_bottom = 0
+	bottom.add_theme_stylebox_override("panel", _panel_style(Color(0.09, 0.065, 0.15, 0.96)))
+	root.add_child(bottom)
 	var layout := VBoxContainer.new()
-	layout.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	layout.add_theme_constant_override("separation", 8)
-	root.add_child(layout)
-	var heading := Label.new()
-	heading.text = "♥ ELYRA AI  |  Klepni na podlahu pro pohyb"
-	heading.add_theme_font_size_override("font_size", 30)
-	layout.add_child(heading)
-	var gap := Control.new()
-	gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	layout.add_child(gap)
-	var buttons := HFlowContainer.new()
-	layout.add_child(buttons)
+	bottom.add_child(layout)
+	var hint := Label.new()
+	hint.text = "Klepni do místnosti a Elyra se přesune"
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.add_theme_font_size_override("font_size", 15)
+	layout.add_child(hint)
+	# Horizontal action bar stays usable on narrow phone screens.
+	var action_scroll := ScrollContainer.new()
+	action_scroll.custom_minimum_size.y = 54
+	action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	action_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	layout.add_child(action_scroll)
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 8)
+	action_scroll.add_child(buttons)
 	for action in ["Zamávat", "Tanec", "Objetí", "Polibek", "Oblečení", "18+"]:
-		var b := Button.new()
-		b.text = action
-		buttons.add_child(b)
-		b.pressed.connect(_action.bind(action))
+		var button := Button.new()
+		button.text = action
+		button.custom_minimum_size = Vector2(112, 46)
+		button.add_theme_font_size_override("font_size", 17)
+		buttons.add_child(button)
+		button.pressed.connect(_action.bind(action))
 	chat_log = RichTextLabel.new()
-	chat_log.custom_minimum_size.y = 270
+	chat_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	chat_log.scroll_following = true
 	chat_log.bbcode_enabled = false
+	chat_log.add_theme_font_size_override("normal_font_size", 17)
 	layout.add_child(chat_log)
 	var input_row := HBoxContainer.new()
 	layout.add_child(input_row)
 	chat_input = LineEdit.new()
 	chat_input.placeholder_text = "Napiš Elyře..."
+	chat_input.custom_minimum_size.y = 54
 	chat_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	input_row.add_child(chat_input)
 	chat_input.text_submitted.connect(_send)
 	var send_button := Button.new()
-	send_button.text = "Odeslat"
+	send_button.text = "➤"
+	send_button.custom_minimum_size = Vector2(65, 54)
 	send_button.pressed.connect(func(): _send(chat_input.text))
 	input_row.add_child(send_button)
+
+func _panel_style(color: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = color
+	style.corner_radius_top_left = 16
+	style.corner_radius_top_right = 16
+	style.content_margin_left = 14
+	style.content_margin_right = 14
+	style.content_margin_top = 12
+	style.content_margin_bottom = 12
+	return style
 
 func _action(action: String) -> void:
 	match action:
